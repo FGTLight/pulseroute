@@ -42,5 +42,23 @@ abstract final class GeoMath {
     return math.sqrt(cx * cx + cy * cy);
   }
 
+  /// Initial bearing from [a] to [b] in degrees (0 = north, 90 = east).
+  static double bearing(GeoPoint a, GeoPoint b) {
+    final lat1 = _rad(a.lat);
+    final lat2 = _rad(b.lat);
+    final dLng = _rad(b.lng - a.lng);
+    final y = math.sin(dLng) * math.cos(lat2);
+    final x =
+        math.cos(lat1) * math.sin(lat2) -
+        math.sin(lat1) * math.cos(lat2) * math.cos(dLng);
+    return (math.atan2(y, x) * 180 / math.pi + 360) % 360;
+  }
+
+  /// Smallest difference between two bearings, between 0 and 180 degrees.
+  static double angleBetween(double bearingA, double bearingB) {
+    final diff = (bearingA - bearingB).abs() % 360;
+    return diff > 180 ? 360 - diff : diff;
+  }
+
   static double _rad(double degrees) => degrees * math.pi / 180;
 }

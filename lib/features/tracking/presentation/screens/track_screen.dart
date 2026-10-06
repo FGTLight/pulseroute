@@ -8,6 +8,7 @@ import '../../../../core/domain/distance_unit.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../incidents/presentation/bloc/incidents_bloc.dart';
 import '../../../incidents/presentation/report_flow.dart';
+import '../../../incidents/presentation/widgets/proximity_alert_banner.dart';
 import '../../../map/presentation/widgets/incident_layer_builder.dart';
 import '../bloc/tracking_bloc.dart';
 import '../widgets/location_rationale_sheet.dart';
@@ -99,7 +100,11 @@ class TrackScreen extends StatelessWidget {
               top: 0,
               left: 0,
               right: 0,
-              child: SafeArea(child: _StatusChip()),
+              child: SafeArea(
+                child: Column(
+                  children: [_StatusChip(), ProximityAlertBanner()],
+                ),
+              ),
             ),
             const Align(
               alignment: Alignment.bottomCenter,

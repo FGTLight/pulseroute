@@ -10,9 +10,11 @@ import 'package:pulseroute/features/auth/domain/entities/app_user.dart';
 import 'package:pulseroute/features/auth/domain/usecases/auth_usecases.dart';
 import 'package:pulseroute/features/auth/presentation/bloc/session_bloc.dart';
 import 'package:pulseroute/features/auth/presentation/cubit/sign_in_cubit.dart';
+import 'package:pulseroute/features/incidents/domain/repositories/alert_notifier.dart';
 import 'package:pulseroute/features/incidents/domain/repositories/incident_repository.dart';
 import 'package:pulseroute/features/incidents/domain/usecases/incident_usecases.dart';
 import 'package:pulseroute/features/incidents/presentation/bloc/incidents_bloc.dart';
+import 'package:pulseroute/features/incidents/presentation/cubit/proximity_alert_cubit.dart';
 import 'package:pulseroute/features/settings/presentation/cubit/theme_cubit.dart';
 import 'package:pulseroute/features/tracking/domain/repositories/location_repository.dart';
 import 'package:pulseroute/features/tracking/domain/repositories/workout_recorder_repository.dart';
@@ -29,6 +31,8 @@ class _MockRecorder extends Mock implements WorkoutRecorderRepository;
 class _MockSync extends Mock implements WorkoutSyncRepository;
 
 class _MockIncidents extends Mock implements IncidentRepository;
+
+class _MockNotifier extends Mock implements AlertNotifier;
 
 void main() {
   setUpAll(() => registerFallbackValue(IncidentsBloc.fallbackCenter));
@@ -61,6 +65,15 @@ void main() {
 
     // The router creates screen blocs from the service locator.
     getIt
+      ..registerLazySingleton(
+        () => ProximityAlertCubit(
+          tracking: getIt<TrackingBloc>().stream,
+          incidents: () => getIt<IncidentsBloc>().state.incidents,
+          notifier: _MockNotifier(),
+          settings: MockSettingsRepository(),
+        ),
+        dispose: (cubit) => cubit.close(),
+      )
       ..registerLazySingleton(
         () => IncidentsBloc(
           getNearby: GetNearbyIncidents(incidents),

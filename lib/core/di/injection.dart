@@ -14,9 +14,12 @@ import '../../features/auth/presentation/cubit/sign_in_cubit.dart';
 import '../../features/auth/presentation/cubit/sign_up_cubit.dart';
 import '../../features/incidents/data/repositories/image_picker_photo_repository.dart';
 import '../../features/incidents/data/repositories/supabase_incident_repository.dart';
+import '../../features/incidents/data/services/local_notification_alert_notifier.dart';
+import '../../features/incidents/domain/repositories/alert_notifier.dart';
 import '../../features/incidents/domain/repositories/incident_repository.dart';
 import '../../features/incidents/domain/usecases/incident_usecases.dart';
 import '../../features/incidents/presentation/bloc/incidents_bloc.dart';
+import '../../features/incidents/presentation/cubit/proximity_alert_cubit.dart';
 import '../../features/incidents/presentation/cubit/report_incident_cubit.dart';
 import '../../features/settings/data/shared_prefs_settings_repository.dart';
 import '../../features/settings/domain/settings_repository.dart';
@@ -146,6 +149,18 @@ void _registerIncidents() {
         locate: getIt<LocationRepository>().currentPosition,
       )..add(const IncidentsStarted()),
       dispose: (bloc) => bloc.close(),
+    )
+    // Proximity alerts follow the recording through the bloc streams, so
+    // they keep working with the screen off.
+    ..registerLazySingleton<AlertNotifier>(LocalNotificationAlertNotifier.new)
+    ..registerLazySingleton<ProximityAlertCubit>(
+      () => ProximityAlertCubit(
+        tracking: getIt<TrackingBloc>().stream,
+        incidents: () => getIt<IncidentsBloc>().state.incidents,
+        notifier: getIt(),
+        settings: getIt(),
+      ),
+      dispose: (cubit) => cubit.close(),
     )
     ..registerFactoryParam<ReportIncidentCubit, GeoPoint, void>(
       (location, _) => ReportIncidentCubit(

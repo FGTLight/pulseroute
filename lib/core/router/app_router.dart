@@ -12,6 +12,7 @@ import '../../features/auth/presentation/screens/profile_screen.dart';
 import '../../features/auth/presentation/screens/sign_in_screen.dart';
 import '../../features/auth/presentation/screens/sign_up_screen.dart';
 import '../../features/incidents/presentation/bloc/incidents_bloc.dart';
+import '../../features/incidents/presentation/cubit/proximity_alert_cubit.dart';
 import '../../features/incidents/presentation/cubit/report_incident_cubit.dart';
 import '../../features/incidents/presentation/screens/incidents_screen.dart';
 import '../../features/incidents/presentation/screens/report_incident_screen.dart';
@@ -65,6 +66,7 @@ GoRouter createRouter({
           providers: [
             BlocProvider.value(value: getIt<TrackingBloc>()),
             BlocProvider.value(value: getIt<IncidentsBloc>()),
+            BlocProvider.value(value: getIt<ProximityAlertCubit>()),
           ],
           child: AppShell(navigationShell: shell),
         ),
