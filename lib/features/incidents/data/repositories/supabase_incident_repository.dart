@@ -7,6 +7,7 @@ import '../../../../core/domain/geo_point.dart';
 import '../../../../core/errors/error_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/result.dart';
+import '../../../../core/utils/ewkt.dart';
 import '../../domain/entities/incident.dart';
 import '../../domain/entities/incident_draft.dart';
 import '../../domain/repositories/incident_repository.dart';
@@ -133,6 +134,34 @@ class SupabaseIncidentRepository implements IncidentRepository {
           .select()
           .single();
       return Success(IncidentModel.fromJson(row, photoUrlFor: _photoUrl));
+    } on Object catch (error) {
+      return Err(mapError(error));
+    }
+  }
+
+  @override
+  Future<Result<List<Incident>>> nearRoute({
+    required String workoutId,
+    required List<GeoPoint> route,
+    required bool synced,
+    double bufferM = 50,
+  }) async {
+    final line = Ewkt.lineString(route);
+    if (line == null) return const Success([]);
+    try {
+      final rows = synced
+          ? await _client.rpc<List<dynamic>>(
+              'incidents_for_workout',
+              params: {'workout_id': workoutId, 'buffer_m': bufferM},
+            )
+          : await _client.rpc<List<dynamic>>(
+              'incidents_along_route',
+              params: {'route': line, 'buffer_m': bufferM},
+            );
+      return Success([
+        for (final r in rows.cast<Map<String, dynamic>>())
+          IncidentModel.fromJson(r, photoUrlFor: _photoUrl),
+      ]);
     } on Object catch (error) {
       return Err(mapError(error));
     }

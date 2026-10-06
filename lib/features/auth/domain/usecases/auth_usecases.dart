@@ -62,6 +62,20 @@ class SignOut {
   Future<Result<void>> call() => _repository.signOut();
 }
 
+/// Deletes the account on the server, then everything stored on the device.
+class DeleteAccount {
+  const DeleteAccount(this._repository, this._clearLocalData);
+
+  final AuthRepository _repository;
+  final Future<void> Function() _clearLocalData;
+
+  Future<Result<void>> call() async {
+    final result = await _repository.deleteAccount();
+    if (result.isSuccess) await _clearLocalData();
+    return result;
+  }
+}
+
 /// Loads the signed-in user's profile.
 class GetMyProfile {
   const GetMyProfile(this._repository);

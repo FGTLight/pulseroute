@@ -5,6 +5,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:pulseroute/core/database/app_database.dart';
 import 'package:pulseroute/core/domain/activity_type.dart';
 import 'package:pulseroute/core/domain/geo_point.dart';
+import 'package:pulseroute/core/utils/ewkt.dart';
 import 'package:pulseroute/features/tracking/data/repositories/drift_workout_recorder_repository.dart';
 import 'package:pulseroute/features/tracking/domain/entities/active_workout.dart';
 import 'package:pulseroute/features/tracking/domain/entities/workout_stats.dart';
@@ -148,12 +149,9 @@ void main() {
   });
 
   test('routes are sent to PostGIS as EWKT (lng lat order)', () {
+    expect(Ewkt.lineString(const [GeoPoint(1, 2)]), isNull);
     expect(
-      WorkoutRemoteDataSource.lineStringEwkt(const [GeoPoint(1, 2)]),
-      isNull,
-    );
-    expect(
-      WorkoutRemoteDataSource.lineStringEwkt(const [
+      Ewkt.lineString(const [
         GeoPoint(-30.03, -51.22),
         GeoPoint(-30.04, -51.21),
       ]),

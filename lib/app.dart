@@ -6,17 +6,18 @@ import 'core/router/app_router.dart';
 import 'core/router/stream_listenable.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/bloc/session_bloc.dart';
-import 'features/settings/presentation/cubit/theme_cubit.dart';
+import 'features/settings/domain/app_settings.dart';
+import 'features/settings/presentation/cubit/settings_cubit.dart';
 
 /// Root widget: global blocs, theme and router.
 class PulseRouteApp extends StatefulWidget {
   const PulseRouteApp({
-    required this.themeCubit,
+    required this.settingsCubit,
     required this.sessionBloc,
     super.key,
   });
 
-  final ThemeCubit themeCubit;
+  final SettingsCubit settingsCubit;
   final SessionBloc sessionBloc;
 
   @override
@@ -24,9 +25,14 @@ class PulseRouteApp extends StatefulWidget {
 }
 
 class _PulseRouteAppState extends State<PulseRouteApp> {
-  late final _refresh = StreamListenable(widget.sessionBloc.stream);
+  // Redirects depend on the session and on the onboarding flag.
+  late final _refresh = StreamListenable([
+    widget.sessionBloc.stream,
+    widget.settingsCubit.stream.map((s) => s.onboardingDone).distinct(),
+  ]);
   late final GoRouter _router = createRouter(
     session: widget.sessionBloc,
+    settings: widget.settingsCubit,
     refreshListenable: _refresh,
   );
 
@@ -41,16 +47,17 @@ class _PulseRouteAppState extends State<PulseRouteApp> {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider.value(value: widget.themeCubit),
+        BlocProvider.value(value: widget.settingsCubit),
         BlocProvider.value(value: widget.sessionBloc),
       ],
-      child: BlocBuilder<ThemeCubit, ThemeMode>(
-        builder: (context, themeMode) => MaterialApp.router(
+      child: BlocBuilder<SettingsCubit, AppSettings>(
+        buildWhen: (a, b) => a.themeMode != b.themeMode,
+        builder: (context, settings) => MaterialApp.router(
           title: 'PulseRoute',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
-          themeMode: themeMode,
+          themeMode: settings.themeMode,
           routerConfig: _router,
         ),
       ),

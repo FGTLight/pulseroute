@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:pulseroute/app.dart';
+import 'package:pulseroute/core/connectivity/connectivity_cubit.dart';
 import 'package:pulseroute/core/di/injection.dart';
+import 'package:pulseroute/core/domain/distance_unit.dart';
 import 'package:pulseroute/core/errors/result.dart';
 import 'package:pulseroute/features/auth/domain/entities/app_user.dart';
 import 'package:pulseroute/features/auth/domain/usecases/auth_usecases.dart';
@@ -15,13 +17,18 @@ import 'package:pulseroute/features/incidents/domain/repositories/incident_repos
 import 'package:pulseroute/features/incidents/domain/usecases/incident_usecases.dart';
 import 'package:pulseroute/features/incidents/presentation/bloc/incidents_bloc.dart';
 import 'package:pulseroute/features/incidents/presentation/cubit/proximity_alert_cubit.dart';
-import 'package:pulseroute/features/settings/presentation/cubit/theme_cubit.dart';
+import 'package:pulseroute/features/settings/presentation/cubit/account_cubit.dart';
+import 'package:pulseroute/features/settings/presentation/cubit/settings_cubit.dart';
 import 'package:pulseroute/features/tracking/domain/repositories/location_repository.dart';
 import 'package:pulseroute/features/tracking/domain/repositories/workout_recorder_repository.dart';
 import 'package:pulseroute/features/tracking/domain/usecases/finish_workout.dart';
 import 'package:pulseroute/features/tracking/presentation/bloc/tracking_bloc.dart';
+import 'package:pulseroute/features/workouts/domain/repositories/workout_repository.dart';
 import 'package:pulseroute/features/workouts/domain/repositories/workout_sync_repository.dart';
+import 'package:pulseroute/features/workouts/domain/usecases/workout_usecases.dart';
+import 'package:pulseroute/features/workouts/presentation/cubit/history_cubit.dart';
 
+import 'helpers/fakes.dart';
 import 'helpers/mocks.dart';
 
 class _MockLocation extends Mock implements LocationRepository;
@@ -34,19 +41,21 @@ class _MockIncidents extends Mock implements IncidentRepository;
 
 class _MockNotifier extends Mock implements AlertNotifier;
 
-void main() {
-  setUpAll(() => registerFallbackValue(IncidentsBloc.fallbackCenter));
+class _MockWorkouts extends Mock implements WorkoutRepository;
 
+/// End-to-end navigation of the app with every backend mocked.
+void main() {
   const user = AppUser(id: 'u1', email: 'ana@example.com');
   late MockAuthRepository auth;
   late StreamController<AppUser?> userChanges;
-  late ThemeCubit themeCubit;
+  late InMemorySettingsRepository settingsRepository;
+  late SettingsCubit settings;
+
+  setUpAll(() => registerFallbackValue(IncidentsBloc.fallbackCenter));
 
   setUp(() {
-    final settings = MockSettingsRepository();
-    when(() => settings.themeMode).thenReturn(ThemeMode.light);
-    when(() => settings.setThemeMode(ThemeMode.dark)).thenAnswer((_) async {});
-    themeCubit = ThemeCubit(settings);
+    settingsRepository = InMemorySettingsRepository();
+    settings = SettingsCubit(settingsRepository);
 
     auth = MockAuthRepository();
     userChanges = StreamController<AppUser?>.broadcast();
@@ -57,22 +66,25 @@ void main() {
     when(location.isBatteryOptimized).thenAnswer((_) async => false);
     final recorder = _MockRecorder();
     when(recorder.loadActive).thenAnswer((_) async => const Success(null));
-
+    final sync = _MockSync();
+    when(sync.syncPending).thenAnswer((_) async => const Success(0));
     final incidents = _MockIncidents();
     when(incidents.watchChanges).thenAnswer((_) => const Stream.empty());
     when(() => incidents.nearby(any(), radiusM: any(named: 'radiusM')))
         .thenAnswer((_) async => const Success([]));
+    final workouts = _MockWorkouts();
+    when(workouts.watchHistory).thenAnswer((_) => Stream.value(const []));
 
-    // The router creates screen blocs from the service locator.
+    // The router reads screen blocs from the service locator.
     getIt
       ..registerLazySingleton(
-        () => ProximityAlertCubit(
-          tracking: getIt<TrackingBloc>().stream,
-          incidents: () => getIt<IncidentsBloc>().state.incidents,
-          notifier: _MockNotifier(),
-          settings: MockSettingsRepository(),
+        () => TrackingBloc(
+          location: location,
+          recorder: recorder,
+          finishWorkout: FinishWorkout(recorder: recorder, sync: sync),
+          newId: () => 'w1',
         ),
-        dispose: (cubit) => cubit.close(),
+        dispose: (bloc) => bloc.close(),
       )
       ..registerLazySingleton(
         () => IncidentsBloc(
@@ -84,38 +96,67 @@ void main() {
         dispose: (bloc) => bloc.close(),
       )
       ..registerLazySingleton(
-        () => TrackingBloc(
-          location: location,
-          recorder: recorder,
-          finishWorkout: FinishWorkout(recorder: recorder, sync: _MockSync()),
-          newId: () => 'w1',
+        () => ProximityAlertCubit(
+          tracking: getIt<TrackingBloc>().stream,
+          incidents: () => getIt<IncidentsBloc>().state.incidents,
+          notifier: _MockNotifier(),
+          settings: settingsRepository,
         ),
-        dispose: (bloc) => bloc.close(),
+        dispose: (cubit) => cubit.close(),
+      )
+      ..registerLazySingleton(
+        () => ConnectivityCubit(
+          onlineChanges: const Stream.empty(),
+          isOnline: () async => true,
+        ),
+        dispose: (cubit) => cubit.close(),
       )
       ..registerFactory(
         () => SignInCubit(
           signInWithPassword: SignInWithPassword(auth),
           sendMagicLink: SendMagicLink(auth),
         ),
-      );
+      )
+      ..registerFactory(
+        () => HistoryCubit(
+          watchHistory: WatchHistory(workouts),
+          refreshHistory: RefreshHistory(workouts, sync),
+          deleteWorkout: DeleteWorkout(workouts),
+        ),
+      )
+      ..registerFactory(() => AccountCubit(DeleteAccount(auth, () async {})));
   });
 
   tearDown(() async {
     await userChanges.close();
-    await themeCubit.close();
+    await settings.close();
     await getIt.reset();
   });
 
-  Future<SessionBloc> pumpApp(WidgetTester tester, {AppUser? user}) async {
+  Future<void> pumpApp(WidgetTester tester, {AppUser? user}) async {
     when(() => auth.currentUser).thenReturn(user);
     final session = SessionBloc(repository: auth, signOut: SignOut(auth));
     addTearDown(session.close);
     await tester.pumpWidget(
-      PulseRouteApp(themeCubit: themeCubit, sessionBloc: session),
+      PulseRouteApp(settingsCubit: settings, sessionBloc: session),
     );
     await tester.pumpAndSettle();
-    return session;
   }
+
+  testWidgets('first launch shows onboarding, then sign in', (tester) async {
+    settingsRepository.onboardingDone = false;
+    settings = SettingsCubit(settingsRepository);
+    await pumpApp(tester);
+
+    expect(find.text('Map every run and ride'), findsOneWidget);
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(find.byKey(const Key('onboardingNext')));
+      await tester.pumpAndSettle();
+    }
+
+    expect(find.text('Welcome back'), findsOneWidget);
+    expect(settingsRepository.onboardingDone, isTrue);
+  });
 
   testWidgets('signed-out users land on the sign in screen', (tester) async {
     await pumpApp(tester);
@@ -124,33 +165,34 @@ void main() {
     expect(find.text('Track'), findsNothing);
   });
 
-  testWidgets('signed-in users see the tabs and can switch', (tester) async {
-    await pumpApp(tester, user: user);
+  testWidgets('signing in opens the app and tabs switch', (tester) async {
+    await pumpApp(tester);
 
+    userChanges.add(user);
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('startButton')), findsOneWidget);
+
     await tester.tap(find.text('History'));
     await tester.pumpAndSettle();
     expect(find.text('No workouts yet'), findsOneWidget);
   });
 
-  testWidgets('signing in from the auth provider opens the app', (
-    tester,
-  ) async {
-    await pumpApp(tester);
-
-    userChanges.add(user);
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('startButton')), findsOneWidget);
-  });
-
-  testWidgets('theme and sign out from Settings', (tester) async {
+  testWidgets('settings change theme and units, and sign out', (tester) async {
+    // A tall phone, so the whole settings list fits above the nav bar.
+    tester.view.physicalSize = const Size(1080, 2600);
+    tester.view.devicePixelRatio = 2.5;
+    addTearDown(tester.view.reset);
     await pumpApp(tester, user: user);
 
     await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();
     expect(find.text('ana@example.com'), findsOneWidget);
 
+    await tester.tap(find.text('Miles'));
+    await tester.pumpAndSettle();
+    expect(settingsRepository.unit, DistanceUnit.mi);
+
+    await tester.ensureVisible(find.text('Dark'));
     await tester.tap(find.text('Dark'));
     await tester.pumpAndSettle();
     expect(
@@ -158,6 +200,8 @@ void main() {
       ThemeMode.dark,
     );
 
+    await tester.ensureVisible(find.text('Sign out'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Sign out'));
     await tester.pumpAndSettle();
     expect(find.text('Welcome back'), findsOneWidget);

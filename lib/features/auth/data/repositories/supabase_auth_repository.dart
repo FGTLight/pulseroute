@@ -8,9 +8,11 @@ import '../../domain/repositories/auth_repository.dart';
 
 /// [AuthRepository] backed by Supabase Auth.
 class SupabaseAuthRepository implements AuthRepository {
-  SupabaseAuthRepository(this._auth);
+  SupabaseAuthRepository(this._client);
 
-  final GoTrueClient _auth;
+  final SupabaseClient _client;
+
+  GoTrueClient get _auth => _client.auth;
 
   /// Deep link that opens the app from a magic link email. It must be listed
   /// in Supabase → Authentication → URL Configuration → Redirect URLs.
@@ -68,10 +70,25 @@ class SupabaseAuthRepository implements AuthRepository {
   @override
   Future<Result<void>> signOut() => _guard(_auth.signOut);
 
+  @override
+  Future<Result<void>> deleteAccount() => _guard(() async {
+    final userId = _auth.currentUser?.id;
+    if (userId == null) return;
+    // Supabase blocks deleting Storage objects from SQL, so photos are
+    // removed through the API before the account row disappears.
+    final bucket = _client.storage.from('incident-photos');
+    final photos = await bucket.list(path: userId);
+    if (photos.isNotEmpty) {
+      await bucket.remove([for (final f in photos) '$userId/${f.name}']);
+    }
+    await _client.rpc<void>('delete_account');
+    await _auth.signOut();
+  });
+
   static AppUser? _toAppUser(User? user) =>
       user == null ? null : AppUser(id: user.id, email: user.email ?? '');
 
-  static Future<Result<void>> _guard(Future<Object?> Function() action) async {
+  static Future<Result<void>> _guard(Future<void> Function() action) async {
     try {
       await action();
       return const Success(null);

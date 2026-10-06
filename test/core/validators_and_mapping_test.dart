@@ -79,20 +79,32 @@ void main() {
     });
   });
 
-  group('authRedirect', () {
+  group('appRedirect', () {
     const signedIn = SessionState.authenticated(
       AppUser(id: 'u1', email: 'ana@example.com'),
     );
     const signedOut = SessionState.unauthenticated();
 
+    String? go(SessionState s, String to, {bool onboarded = true}) =>
+        appRedirect(session: s, onboardingDone: onboarded, location: to);
+
+    test('first launch always starts with the onboarding', () {
+      expect(
+        go(signedOut, AppRoutes.track, onboarded: false),
+        AppRoutes.onboarding,
+      );
+      expect(go(signedOut, AppRoutes.onboarding, onboarded: false), isNull);
+    });
+
     test('signed-out users go to sign in', () {
-      expect(authRedirect(signedOut, AppRoutes.track), AppRoutes.signIn);
-      expect(authRedirect(signedOut, AppRoutes.signUp), isNull);
+      expect(go(signedOut, AppRoutes.track), AppRoutes.signIn);
+      expect(go(signedOut, AppRoutes.onboarding), AppRoutes.signIn);
+      expect(go(signedOut, AppRoutes.signUp), isNull);
     });
 
     test('signed-in users leave the auth screens', () {
-      expect(authRedirect(signedIn, AppRoutes.signIn), AppRoutes.track);
-      expect(authRedirect(signedIn, AppRoutes.history), isNull);
+      expect(go(signedIn, AppRoutes.signIn), AppRoutes.track);
+      expect(go(signedIn, AppRoutes.history), isNull);
     });
   });
 }

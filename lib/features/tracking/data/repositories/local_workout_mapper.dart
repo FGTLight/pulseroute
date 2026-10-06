@@ -4,7 +4,9 @@ import 'package:drift/drift.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/domain/activity_type.dart';
+import '../../../../core/domain/geo_point.dart';
 import '../../../workouts/domain/entities/workout.dart';
+import '../../../workouts/domain/entities/workout_preview.dart';
 import '../../domain/entities/track_point.dart';
 
 /// Converts local database rows into domain objects.
@@ -32,6 +34,42 @@ abstract final class LocalWorkoutMapper {
         ),
     ];
   }
+
+  static Object? decodeJson(String json) => jsonDecode(json);
+
+  /// Server splits come in seconds; locally they are milliseconds.
+  static String encodeSplitSeconds(List<dynamic> seconds) =>
+      jsonEncode([for (final s in seconds) (s as num).toInt() * 1000]);
+
+  /// `[[lat, lng], ...]` with 5 decimals (~1 m), compact for storage.
+  static String encodePreview(List<GeoPoint> points) => jsonEncode([
+    for (final p in points)
+      [
+        double.parse(p.lat.toStringAsFixed(5)),
+        double.parse(p.lng.toStringAsFixed(5)),
+      ],
+  ]);
+
+  static List<GeoPoint> decodePoints(Object? json) => [
+    for (final p in (json as List<dynamic>?) ?? const <dynamic>[])
+      GeoPoint(
+        ((p as List<dynamic>)[0] as num).toDouble(),
+        (p[1] as num).toDouble(),
+      ),
+  ];
+
+  static WorkoutPreview toPreview(
+    LocalWorkoutRow row,
+    List<GeoPoint> preview,
+  ) => WorkoutPreview(
+    id: row.id,
+    activity: ActivityType.fromName(row.activity),
+    startedAt: row.startedAt,
+    duration: Duration(milliseconds: row.activeDurationMs),
+    distanceM: row.distanceM,
+    preview: preview,
+    synced: row.synced,
+  );
 
   /// A finished workout with its route.
   static Workout toWorkout(LocalWorkoutRow row, List<TrackPoint> points) =>

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/domain/distance_unit.dart';
 import '../../../../core/domain/geo_point.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/geo_math.dart';
+import '../../../settings/presentation/unit_context.dart';
 import '../../domain/entities/incident.dart';
 import '../incident_style.dart';
 
@@ -29,7 +29,7 @@ class IncidentTile extends StatelessWidget {
       if (origin != null)
         Formatters.shortDistance(
           GeoMath.distance(origin, incident.location),
-          DistanceUnit.km,
+          context.distanceUnit,
         ),
       if (incident.confirmations > 0) '${incident.confirmations} confirmed',
     ].join(' · ');

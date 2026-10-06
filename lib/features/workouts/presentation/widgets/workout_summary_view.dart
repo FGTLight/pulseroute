@@ -20,12 +20,16 @@ class WorkoutSummaryView extends StatelessWidget {
     required this.workout,
     this.unit = DistanceUnit.km,
     this.mapBuilder = _defaultMap,
+    this.footer,
     super.key,
   });
 
   final Workout workout;
   final DistanceUnit unit;
   final RouteMapBuilder mapBuilder;
+
+  /// Extra content below the splits (e.g. nearby incidents).
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -81,6 +85,7 @@ class WorkoutSummaryView extends StatelessWidget {
           const SizedBox(height: 16),
           _SplitsCard(splits: workout.splits, unit: unit),
         ],
+        ?footer,
       ],
     );
   }

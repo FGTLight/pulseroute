@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'offline_banner.dart';
+
 /// Hosts the main tabs: a bottom [NavigationBar] on phones and a
 /// [NavigationRail] on tablets and in landscape.
 class AppShell extends StatelessWidget {
@@ -47,14 +49,14 @@ class AppShell extends StatelessWidget {
               ],
             ),
             const VerticalDivider(width: 1),
-            Expanded(child: navigationShell),
+            Expanded(child: OfflineAware(child: navigationShell)),
           ],
         ),
       );
     }
 
     return Scaffold(
-      body: navigationShell,
+      body: OfflineAware(child: navigationShell),
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: _onSelect,

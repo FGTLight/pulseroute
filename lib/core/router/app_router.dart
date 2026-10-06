@@ -16,12 +16,19 @@ import '../../features/incidents/presentation/cubit/proximity_alert_cubit.dart';
 import '../../features/incidents/presentation/cubit/report_incident_cubit.dart';
 import '../../features/incidents/presentation/screens/incidents_screen.dart';
 import '../../features/incidents/presentation/screens/report_incident_screen.dart';
+import '../../features/onboarding/presentation/onboarding_screen.dart';
+import '../../features/settings/presentation/cubit/account_cubit.dart';
+import '../../features/settings/presentation/cubit/settings_cubit.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/tracking/presentation/bloc/tracking_bloc.dart';
 import '../../features/tracking/presentation/screens/track_screen.dart';
 import '../../features/workouts/domain/entities/workout.dart';
+import '../../features/workouts/presentation/cubit/history_cubit.dart';
+import '../../features/workouts/presentation/cubit/workout_detail_cubit.dart';
 import '../../features/workouts/presentation/screens/history_screen.dart';
+import '../../features/workouts/presentation/screens/workout_detail_screen.dart';
 import '../../features/workouts/presentation/screens/workout_summary_screen.dart';
+import '../connectivity/connectivity_cubit.dart';
 import '../di/injection.dart';
 import '../domain/geo_point.dart';
 import '../widgets/app_shell.dart';
@@ -33,6 +40,7 @@ import 'app_routes.dart';
 /// the composition root), so screens only read them from the context.
 GoRouter createRouter({
   required SessionBloc session,
+  required SettingsCubit settings,
   Listenable? refreshListenable,
 }) {
   // One key per router instance, so several apps can coexist in tests.
@@ -42,9 +50,17 @@ GoRouter createRouter({
     navigatorKey: rootKey,
     initialLocation: AppRoutes.track,
     refreshListenable: refreshListenable,
-    redirect: (context, state) =>
-        authRedirect(session.state, state.matchedLocation),
+    redirect: (context, state) => appRedirect(
+      session: session.state,
+      onboardingDone: settings.state.onboardingDone,
+      location: state.matchedLocation,
+    ),
     routes: [
+      GoRoute(
+        path: AppRoutes.onboarding,
+        builder: (context, state) =>
+            OnboardingScreen(onDone: settings.completeOnboarding),
+      ),
       GoRoute(
         path: AppRoutes.signIn,
         builder: (context, state) => BlocProvider(
@@ -60,13 +76,14 @@ GoRouter createRouter({
         ),
       ),
       StatefulShellRoute.indexedStack(
-        // The tracking bloc lives above the tabs, so a workout keeps
-        // recording while the user browses history or incidents.
+        // These blocs live above the tabs, so a workout keeps recording
+        // (and alerting) while the user browses other tabs.
         builder: (context, state, shell) => MultiBlocProvider(
           providers: [
             BlocProvider.value(value: getIt<TrackingBloc>()),
             BlocProvider.value(value: getIt<IncidentsBloc>()),
             BlocProvider.value(value: getIt<ProximityAlertCubit>()),
+            BlocProvider.value(value: getIt<ConnectivityCubit>()),
           ],
           child: AppShell(navigationShell: shell),
         ),
@@ -111,7 +128,23 @@ GoRouter createRouter({
             routes: [
               GoRoute(
                 path: AppRoutes.history,
-                builder: (context, state) => const HistoryScreen(),
+                builder: (context, state) => BlocProvider(
+                  create: (_) => getIt<HistoryCubit>(),
+                  child: const HistoryScreen(),
+                ),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) => BlocProvider(
+                      create: (_) {
+                        final cubit = getIt<WorkoutDetailCubit>();
+                        unawaited(cubit.load(state.pathParameters['id']!));
+                        return cubit;
+                      },
+                      child: const WorkoutDetailScreen(),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -119,7 +152,10 @@ GoRouter createRouter({
             routes: [
               GoRoute(
                 path: AppRoutes.settings,
-                builder: (context, state) => const SettingsScreen(),
+                builder: (context, state) => BlocProvider(
+                  create: (_) => getIt<AccountCubit>(),
+                  child: const SettingsScreen(),
+                ),
                 routes: [
                   GoRoute(
                     path: 'profile',
@@ -144,9 +180,22 @@ GoRouter createRouter({
 }
 
 /// Where to send the user, or `null` to stay. Pure, so it is unit tested.
-String? authRedirect(SessionState session, String location) {
+///
+/// Order: onboarding (first launch) → sign in → the app.
+String? appRedirect({
+  required SessionState session,
+  required bool onboardingDone,
+  required String location,
+}) {
+  if (!onboardingDone) {
+    return location == AppRoutes.onboarding ? null : AppRoutes.onboarding;
+  }
   final onPublicRoute = AppRoutes.public.contains(location);
-  if (!session.isAuthenticated) return onPublicRoute ? null : AppRoutes.signIn;
+  if (!session.isAuthenticated) {
+    return onPublicRoute && location != AppRoutes.onboarding
+        ? null
+        : AppRoutes.signIn;
+  }
   if (onPublicRoute) return AppRoutes.track;
   return null;
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../settings/presentation/unit_context.dart';
 import '../../domain/entities/workout.dart';
 import '../widgets/workout_summary_view.dart';
 
@@ -20,7 +21,7 @@ class WorkoutSummaryScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: WorkoutSummaryView(workout: workout),
+      body: WorkoutSummaryView(workout: workout, unit: context.distanceUnit),
     );
   }
 }

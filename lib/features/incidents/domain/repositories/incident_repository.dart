@@ -45,6 +45,15 @@ abstract interface class IncidentRepository {
 
   Future<Result<void>> vote(String incidentId, IncidentVote vote);
 
+  /// Incidents within [bufferM] of a workout route. Uploaded workouts
+  /// ([synced]) also include incidents resolved since the workout.
+  Future<Result<List<Incident>>> nearRoute({
+    required String workoutId,
+    required List<GeoPoint> route,
+    required bool synced,
+    double bufferM = 50,
+  });
+
   /// Id of the signed-in user, to tell their own reports apart.
   String? get currentUserId;
 }

@@ -1,4 +1,5 @@
 import '../../../../core/domain/geo_point.dart';
+import '../../../../core/utils/ewkt.dart';
 import '../../domain/entities/incident.dart';
 import '../../domain/entities/incident_draft.dart';
 
@@ -57,7 +58,7 @@ abstract final class IncidentModel {
     'category': categoryToDb(draft.category),
     'severity': draft.severity.level,
     'description': draft.description.trim(),
-    'location': 'SRID=4326;POINT(${draft.location.lng} ${draft.location.lat})',
+    'location': Ewkt.point(draft.location),
     'radius_m': draft.radiusM,
     'photo_path': photoPath,
   };

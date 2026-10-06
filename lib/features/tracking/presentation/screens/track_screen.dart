@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/domain/distance_unit.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../incidents/presentation/bloc/incidents_bloc.dart';
 import '../../../incidents/presentation/report_flow.dart';
 import '../../../incidents/presentation/widgets/proximity_alert_banner.dart';
 import '../../../map/presentation/widgets/incident_layer_builder.dart';
+import '../../../settings/presentation/unit_context.dart';
 import '../bloc/tracking_bloc.dart';
 import '../widgets/location_rationale_sheet.dart';
 import '../widgets/tracking_map.dart';
@@ -106,9 +106,9 @@ class TrackScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const Align(
+            Align(
               alignment: Alignment.bottomCenter,
-              child: TrackingPanel(unit: DistanceUnit.km),
+              child: TrackingPanel(unit: context.distanceUnit),
             ),
           ],
         ),

@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/domain/distance_unit.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/geo_math.dart';
 import '../../../auth/presentation/bloc/session_bloc.dart';
+import '../../../settings/presentation/unit_context.dart';
 import '../../domain/entities/incident.dart';
 import '../bloc/incidents_bloc.dart';
 import '../incident_style.dart';
@@ -78,7 +78,7 @@ class IncidentDetailSheet extends StatelessWidget {
                           if (center != null)
                             Formatters.shortDistance(
                               GeoMath.distance(center, incident.location),
-                              DistanceUnit.km,
+                              context.distanceUnit,
                             ),
                         ].join(' · '),
                         style: theme.textTheme.bodySmall,

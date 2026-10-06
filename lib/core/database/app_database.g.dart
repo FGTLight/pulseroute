@@ -143,6 +143,18 @@ class $LocalWorkoutsTable extends LocalWorkouts
     requiredDuringInsert: false,
     defaultValue: const Constant('[]'),
   );
+  static const VerificationMeta _previewJsonMeta = const VerificationMeta(
+    'previewJson',
+  );
+  @override
+  late final GeneratedColumn<String> previewJson = GeneratedColumn<String>(
+    'preview_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
   static const VerificationMeta _syncedMeta = const VerificationMeta('synced');
   @override
   late final GeneratedColumn<bool> synced = GeneratedColumn<bool>(
@@ -170,6 +182,7 @@ class $LocalWorkoutsTable extends LocalWorkouts
     elevationGainM,
     maxSpeedMps,
     splitsJson,
+    previewJson,
     synced,
   ];
   @override
@@ -270,6 +283,15 @@ class $LocalWorkoutsTable extends LocalWorkouts
         splitsJson.isAcceptableOrUnknown(data['splits_json']!, _splitsJsonMeta),
       );
     }
+    if (data.containsKey('preview_json')) {
+      context.handle(
+        _previewJsonMeta,
+        previewJson.isAcceptableOrUnknown(
+          data['preview_json']!,
+          _previewJsonMeta,
+        ),
+      );
+    }
     if (data.containsKey('synced')) {
       context.handle(
         _syncedMeta,
@@ -333,6 +355,10 @@ class $LocalWorkoutsTable extends LocalWorkouts
         DriftSqlType.string,
         data['${effectivePrefix}splits_json'],
       )!,
+      previewJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}preview_json'],
+      )!,
       synced: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}synced'],
@@ -364,6 +390,10 @@ class LocalWorkoutRow extends DataClass implements Insertable<LocalWorkoutRow> {
 
   /// JSON list of split durations in milliseconds.
   final String splitsJson;
+
+  /// Simplified route (`[[lat, lng], ...]`) for history thumbnails, so the
+  /// list never loads thousands of points. Added in schema version 2.
+  final String previewJson;
   final bool synced;
   const LocalWorkoutRow({
     required this.id,
@@ -378,6 +408,7 @@ class LocalWorkoutRow extends DataClass implements Insertable<LocalWorkoutRow> {
     required this.elevationGainM,
     required this.maxSpeedMps,
     required this.splitsJson,
+    required this.previewJson,
     required this.synced,
   });
   @override
@@ -399,6 +430,7 @@ class LocalWorkoutRow extends DataClass implements Insertable<LocalWorkoutRow> {
     map['elevation_gain_m'] = Variable<double>(elevationGainM);
     map['max_speed_mps'] = Variable<double>(maxSpeedMps);
     map['splits_json'] = Variable<String>(splitsJson);
+    map['preview_json'] = Variable<String>(previewJson);
     map['synced'] = Variable<bool>(synced);
     return map;
   }
@@ -421,6 +453,7 @@ class LocalWorkoutRow extends DataClass implements Insertable<LocalWorkoutRow> {
       elevationGainM: Value(elevationGainM),
       maxSpeedMps: Value(maxSpeedMps),
       splitsJson: Value(splitsJson),
+      previewJson: Value(previewJson),
       synced: Value(synced),
     );
   }
@@ -443,6 +476,7 @@ class LocalWorkoutRow extends DataClass implements Insertable<LocalWorkoutRow> {
       elevationGainM: serializer.fromJson<double>(json['elevationGainM']),
       maxSpeedMps: serializer.fromJson<double>(json['maxSpeedMps']),
       splitsJson: serializer.fromJson<String>(json['splitsJson']),
+      previewJson: serializer.fromJson<String>(json['previewJson']),
       synced: serializer.fromJson<bool>(json['synced']),
     );
   }
@@ -462,6 +496,7 @@ class LocalWorkoutRow extends DataClass implements Insertable<LocalWorkoutRow> {
       'elevationGainM': serializer.toJson<double>(elevationGainM),
       'maxSpeedMps': serializer.toJson<double>(maxSpeedMps),
       'splitsJson': serializer.toJson<String>(splitsJson),
+      'previewJson': serializer.toJson<String>(previewJson),
       'synced': serializer.toJson<bool>(synced),
     };
   }
@@ -479,6 +514,7 @@ class LocalWorkoutRow extends DataClass implements Insertable<LocalWorkoutRow> {
     double? elevationGainM,
     double? maxSpeedMps,
     String? splitsJson,
+    String? previewJson,
     bool? synced,
   }) => LocalWorkoutRow(
     id: id ?? this.id,
@@ -493,6 +529,7 @@ class LocalWorkoutRow extends DataClass implements Insertable<LocalWorkoutRow> {
     elevationGainM: elevationGainM ?? this.elevationGainM,
     maxSpeedMps: maxSpeedMps ?? this.maxSpeedMps,
     splitsJson: splitsJson ?? this.splitsJson,
+    previewJson: previewJson ?? this.previewJson,
     synced: synced ?? this.synced,
   );
   LocalWorkoutRow copyWithCompanion(LocalWorkoutsCompanion data) {
@@ -517,6 +554,9 @@ class LocalWorkoutRow extends DataClass implements Insertable<LocalWorkoutRow> {
       splitsJson: data.splitsJson.present
           ? data.splitsJson.value
           : this.splitsJson,
+      previewJson: data.previewJson.present
+          ? data.previewJson.value
+          : this.previewJson,
       synced: data.synced.present ? data.synced.value : this.synced,
     );
   }
@@ -536,6 +576,7 @@ class LocalWorkoutRow extends DataClass implements Insertable<LocalWorkoutRow> {
           ..write('elevationGainM: $elevationGainM, ')
           ..write('maxSpeedMps: $maxSpeedMps, ')
           ..write('splitsJson: $splitsJson, ')
+          ..write('previewJson: $previewJson, ')
           ..write('synced: $synced')
           ..write(')'))
         .toString();
@@ -555,6 +596,7 @@ class LocalWorkoutRow extends DataClass implements Insertable<LocalWorkoutRow> {
     elevationGainM,
     maxSpeedMps,
     splitsJson,
+    previewJson,
     synced,
   );
   @override
@@ -573,6 +615,7 @@ class LocalWorkoutRow extends DataClass implements Insertable<LocalWorkoutRow> {
           other.elevationGainM == this.elevationGainM &&
           other.maxSpeedMps == this.maxSpeedMps &&
           other.splitsJson == this.splitsJson &&
+          other.previewJson == this.previewJson &&
           other.synced == this.synced);
 }
 
@@ -589,6 +632,7 @@ class LocalWorkoutsCompanion extends UpdateCompanion<LocalWorkoutRow> {
   final Value<double> elevationGainM;
   final Value<double> maxSpeedMps;
   final Value<String> splitsJson;
+  final Value<String> previewJson;
   final Value<bool> synced;
   final Value<int> rowid;
   const LocalWorkoutsCompanion({
@@ -604,6 +648,7 @@ class LocalWorkoutsCompanion extends UpdateCompanion<LocalWorkoutRow> {
     this.elevationGainM = const Value.absent(),
     this.maxSpeedMps = const Value.absent(),
     this.splitsJson = const Value.absent(),
+    this.previewJson = const Value.absent(),
     this.synced = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -620,6 +665,7 @@ class LocalWorkoutsCompanion extends UpdateCompanion<LocalWorkoutRow> {
     this.elevationGainM = const Value.absent(),
     this.maxSpeedMps = const Value.absent(),
     this.splitsJson = const Value.absent(),
+    this.previewJson = const Value.absent(),
     this.synced = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -639,6 +685,7 @@ class LocalWorkoutsCompanion extends UpdateCompanion<LocalWorkoutRow> {
     Expression<double>? elevationGainM,
     Expression<double>? maxSpeedMps,
     Expression<String>? splitsJson,
+    Expression<String>? previewJson,
     Expression<bool>? synced,
     Expression<int>? rowid,
   }) {
@@ -655,6 +702,7 @@ class LocalWorkoutsCompanion extends UpdateCompanion<LocalWorkoutRow> {
       if (elevationGainM != null) 'elevation_gain_m': elevationGainM,
       if (maxSpeedMps != null) 'max_speed_mps': maxSpeedMps,
       if (splitsJson != null) 'splits_json': splitsJson,
+      if (previewJson != null) 'preview_json': previewJson,
       if (synced != null) 'synced': synced,
       if (rowid != null) 'rowid': rowid,
     });
@@ -673,6 +721,7 @@ class LocalWorkoutsCompanion extends UpdateCompanion<LocalWorkoutRow> {
     Value<double>? elevationGainM,
     Value<double>? maxSpeedMps,
     Value<String>? splitsJson,
+    Value<String>? previewJson,
     Value<bool>? synced,
     Value<int>? rowid,
   }) {
@@ -689,6 +738,7 @@ class LocalWorkoutsCompanion extends UpdateCompanion<LocalWorkoutRow> {
       elevationGainM: elevationGainM ?? this.elevationGainM,
       maxSpeedMps: maxSpeedMps ?? this.maxSpeedMps,
       splitsJson: splitsJson ?? this.splitsJson,
+      previewJson: previewJson ?? this.previewJson,
       synced: synced ?? this.synced,
       rowid: rowid ?? this.rowid,
     );
@@ -733,6 +783,9 @@ class LocalWorkoutsCompanion extends UpdateCompanion<LocalWorkoutRow> {
     if (splitsJson.present) {
       map['splits_json'] = Variable<String>(splitsJson.value);
     }
+    if (previewJson.present) {
+      map['preview_json'] = Variable<String>(previewJson.value);
+    }
     if (synced.present) {
       map['synced'] = Variable<bool>(synced.value);
     }
@@ -757,6 +810,7 @@ class LocalWorkoutsCompanion extends UpdateCompanion<LocalWorkoutRow> {
           ..write('elevationGainM: $elevationGainM, ')
           ..write('maxSpeedMps: $maxSpeedMps, ')
           ..write('splitsJson: $splitsJson, ')
+          ..write('previewJson: $previewJson, ')
           ..write('synced: $synced, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -1367,6 +1421,7 @@ typedef $$LocalWorkoutsTableCreateCompanionBuilder =
       Value<double> elevationGainM,
       Value<double> maxSpeedMps,
       Value<String> splitsJson,
+      Value<String> previewJson,
       Value<bool> synced,
       Value<int> rowid,
     });
@@ -1384,6 +1439,7 @@ typedef $$LocalWorkoutsTableUpdateCompanionBuilder =
       Value<double> elevationGainM,
       Value<double> maxSpeedMps,
       Value<String> splitsJson,
+      Value<String> previewJson,
       Value<bool> synced,
       Value<int> rowid,
     });
@@ -1487,6 +1543,11 @@ class $$LocalWorkoutsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get previewJson => $composableBuilder(
+    column: $table.previewJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<bool> get synced => $composableBuilder(
     column: $table.synced,
     builder: (column) => ColumnFilters(column),
@@ -1587,6 +1648,11 @@ class $$LocalWorkoutsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get previewJson => $composableBuilder(
+    column: $table.previewJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get synced => $composableBuilder(
     column: $table.synced,
     builder: (column) => ColumnOrderings(column),
@@ -1643,6 +1709,11 @@ class $$LocalWorkoutsTableAnnotationComposer
 
   GeneratedColumn<String> get splitsJson => $composableBuilder(
     column: $table.splitsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get previewJson => $composableBuilder(
+    column: $table.previewJson,
     builder: (column) => column,
   );
 
@@ -1715,6 +1786,7 @@ class $$LocalWorkoutsTableTableManager
                 Value<double> elevationGainM = const Value.absent(),
                 Value<double> maxSpeedMps = const Value.absent(),
                 Value<String> splitsJson = const Value.absent(),
+                Value<String> previewJson = const Value.absent(),
                 Value<bool> synced = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LocalWorkoutsCompanion(
@@ -1730,6 +1802,7 @@ class $$LocalWorkoutsTableTableManager
                 elevationGainM: elevationGainM,
                 maxSpeedMps: maxSpeedMps,
                 splitsJson: splitsJson,
+                previewJson: previewJson,
                 synced: synced,
                 rowid: rowid,
               ),
@@ -1747,6 +1820,7 @@ class $$LocalWorkoutsTableTableManager
                 Value<double> elevationGainM = const Value.absent(),
                 Value<double> maxSpeedMps = const Value.absent(),
                 Value<String> splitsJson = const Value.absent(),
+                Value<String> previewJson = const Value.absent(),
                 Value<bool> synced = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LocalWorkoutsCompanion.insert(
@@ -1762,6 +1836,7 @@ class $$LocalWorkoutsTableTableManager
                 elevationGainM: elevationGainM,
                 maxSpeedMps: maxSpeedMps,
                 splitsJson: splitsJson,
+                previewJson: previewJson,
                 synced: synced,
                 rowid: rowid,
               ),

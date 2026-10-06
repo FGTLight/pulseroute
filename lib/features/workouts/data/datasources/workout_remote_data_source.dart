@@ -1,6 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../../core/domain/geo_point.dart';
+import '../../../../core/utils/ewkt.dart';
 import '../../domain/entities/workout.dart';
 
 /// Talks to the `workouts` table in Supabase.
@@ -17,6 +17,20 @@ class WorkoutRemoteDataSource {
       .from('workouts')
       .upsert(toRow(workout), onConflict: 'id', ignoreDuplicates: true);
 
+  /// The user's workouts, newest first. `route_points` is a computed field
+  /// (see the workouts migration) that returns the route as JSON.
+  Future<List<Map<String, dynamic>>> fetchAll() => _client
+      .from('workouts')
+      .select(
+        'id, activity, started_at, ended_at, duration_s, distance_m, '
+        'elevation_gain_m, max_speed_mps, splits_s, route_points',
+      )
+      .order('started_at', ascending: false)
+      .limit(200);
+
+  Future<void> delete(String id) =>
+      _client.from('workouts').delete().eq('id', id);
+
   /// Row sent to Postgres. The route is sent as EWKT, which PostGIS parses
   /// into a `geography(LineString)`.
   static Map<String, dynamic> toRow(Workout workout) => {
@@ -30,16 +44,6 @@ class WorkoutRemoteDataSource {
     'avg_speed_mps': workout.avgSpeedMps,
     'max_speed_mps': workout.maxSpeedMps,
     'splits_s': [for (final s in workout.splits) s.inSeconds],
-    'route': lineStringEwkt(workout.route),
+    'route': Ewkt.lineString(workout.route),
   };
-
-  /// `SRID=4326;LINESTRING(lng lat, ...)`, or `null` with fewer than two
-  /// points (PostGIS rejects such lines).
-  static String? lineStringEwkt(List<GeoPoint> route) {
-    if (route.length < 2) return null;
-    final coords = route
-        .map((p) => '${p.lng.toStringAsFixed(6)} ${p.lat.toStringAsFixed(6)}')
-        .join(',');
-    return 'SRID=4326;LINESTRING($coords)';
-  }
 }

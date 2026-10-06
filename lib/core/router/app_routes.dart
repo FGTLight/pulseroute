@@ -1,5 +1,6 @@
 /// Route paths, kept in one place to avoid typos.
 abstract final class AppRoutes {
+  static const onboarding = '/welcome';
   static const signIn = '/sign-in';
   static const signUp = '/sign-up';
 
@@ -11,6 +12,8 @@ abstract final class AppRoutes {
   static const settings = '/settings';
   static const profile = '/settings/profile';
 
+  static String workoutDetail(String id) => '/history/$id';
+
   /// Routes reachable without an account.
-  static const Set<String> public = {signIn, signUp};
+  static const Set<String> public = {onboarding, signIn, signUp};
 }

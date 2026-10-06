@@ -33,5 +33,5 @@ Future<void> main() async {
   await configureDependencies(env, Supabase.instance.client);
   // Upload workouts finished while offline (no-op when signed out).
   unawaited(getIt<WorkoutSyncRepository>().syncPending());
-  runApp(PulseRouteApp(themeCubit: getIt(), sessionBloc: getIt()));
+  runApp(PulseRouteApp(settingsCubit: getIt(), sessionBloc: getIt()));
 }

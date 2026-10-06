@@ -36,4 +36,8 @@ abstract interface class AuthRepository {
   Future<Result<void>> sendMagicLink({required String email});
 
   Future<Result<void>> signOut();
+
+  /// Permanently deletes the account, its workouts, votes and photos.
+  /// Reported incidents stay (community data) without the reporter.
+  Future<Result<void>> deleteAccount();
 }

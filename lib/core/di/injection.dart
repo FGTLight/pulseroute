@@ -1,3 +1,4 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -23,7 +24,8 @@ import '../../features/incidents/presentation/cubit/proximity_alert_cubit.dart';
 import '../../features/incidents/presentation/cubit/report_incident_cubit.dart';
 import '../../features/settings/data/shared_prefs_settings_repository.dart';
 import '../../features/settings/domain/settings_repository.dart';
-import '../../features/settings/presentation/cubit/theme_cubit.dart';
+import '../../features/settings/presentation/cubit/account_cubit.dart';
+import '../../features/settings/presentation/cubit/settings_cubit.dart';
 import '../../features/tracking/data/repositories/drift_workout_recorder_repository.dart';
 import '../../features/tracking/data/repositories/geolocator_location_repository.dart';
 import '../../features/tracking/domain/repositories/location_repository.dart';
@@ -31,8 +33,14 @@ import '../../features/tracking/domain/repositories/workout_recorder_repository.
 import '../../features/tracking/domain/usecases/finish_workout.dart';
 import '../../features/tracking/presentation/bloc/tracking_bloc.dart';
 import '../../features/workouts/data/datasources/workout_remote_data_source.dart';
+import '../../features/workouts/data/repositories/drift_workout_repository.dart';
 import '../../features/workouts/data/repositories/workout_sync_repository_impl.dart';
+import '../../features/workouts/domain/repositories/workout_repository.dart';
 import '../../features/workouts/domain/repositories/workout_sync_repository.dart';
+import '../../features/workouts/domain/usecases/workout_usecases.dart';
+import '../../features/workouts/presentation/cubit/history_cubit.dart';
+import '../../features/workouts/presentation/cubit/workout_detail_cubit.dart';
+import '../connectivity/connectivity_cubit.dart';
 import '../database/app_database.dart';
 import '../domain/geo_point.dart';
 import '../env/app_env.dart';
@@ -62,6 +70,8 @@ Future<void> configureDependencies(AppEnv env, SupabaseClient supabase) async {
   _registerAuth();
   _registerTracking();
   _registerIncidents();
+  _registerWorkouts();
+  _registerConnectivity();
 }
 
 void _registerSettings() {
@@ -69,14 +79,15 @@ void _registerSettings() {
     ..registerLazySingleton<SettingsRepository>(
       () => SharedPrefsSettingsRepository(getIt()),
     )
-    ..registerLazySingleton<ThemeCubit>(() => ThemeCubit(getIt()));
+    ..registerLazySingleton<SettingsCubit>(() => SettingsCubit(getIt()))
+    ..registerFactory(() => AccountCubit(getIt()));
 }
 
 void _registerAuth() {
   getIt
     // Data
     ..registerLazySingleton<AuthRepository>(
-      () => SupabaseAuthRepository(getIt<SupabaseClient>().auth),
+      () => SupabaseAuthRepository(getIt()),
     )
     ..registerLazySingleton<ProfileRepository>(
       () => SupabaseProfileRepository(getIt()),
@@ -88,6 +99,9 @@ void _registerAuth() {
     ..registerFactory(() => SignOut(getIt()))
     ..registerFactory(() => GetMyProfile(getIt()))
     ..registerFactory(() => UpdateProfile(getIt()))
+    ..registerFactory(
+      () => DeleteAccount(getIt(), getIt<AppDatabase>().clearAll),
+    )
     // Presentation
     ..registerLazySingleton<SessionBloc>(
       () => SessionBloc(repository: getIt(), signOut: getIt()),
@@ -169,4 +183,47 @@ void _registerIncidents() {
         photos: getIt(),
       ),
     );
+}
+
+void _registerWorkouts() {
+  getIt
+    // Data
+    ..registerLazySingleton<WorkoutRepository>(
+      () => DriftWorkoutRepository(getIt(), getIt()),
+    )
+    // Domain
+    ..registerFactory(() => WatchHistory(getIt()))
+    ..registerFactory(() => RefreshHistory(getIt(), getIt()))
+    ..registerFactory(() => GetWorkout(getIt()))
+    ..registerFactory(() => DeleteWorkout(getIt()))
+    ..registerFactory(() => GetIncidentsNearWorkout(getIt()))
+    // Presentation
+    ..registerFactory(
+      () => HistoryCubit(
+        watchHistory: getIt(),
+        refreshHistory: getIt(),
+        deleteWorkout: getIt(),
+      ),
+    )
+    ..registerFactory(
+      () => WorkoutDetailCubit(getWorkout: getIt(), getIncidents: getIt()),
+    );
+}
+
+void _registerConnectivity() {
+  final connectivity = Connectivity();
+  bool online(List<ConnectivityResult> results) =>
+      results.any((r) => r != ConnectivityResult.none);
+
+  getIt.registerLazySingleton<ConnectivityCubit>(
+    () => ConnectivityCubit(
+      onlineChanges: connectivity.onConnectivityChanged.map(online),
+      isOnline: () async => online(await connectivity.checkConnectivity()),
+      // Back online: upload workouts recorded without a connection.
+      onReconnect: () async {
+        await getIt<WorkoutSyncRepository>().syncPending();
+      },
+    ),
+    dispose: (cubit) => cubit.close(),
+  );
 }

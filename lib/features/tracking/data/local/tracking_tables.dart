@@ -26,6 +26,10 @@ class LocalWorkouts extends Table {
 
   /// JSON list of split durations in milliseconds.
   TextColumn get splitsJson => text().withDefault(const Constant('[]'))();
+
+  /// Simplified route (`[[lat, lng], ...]`) for history thumbnails, so the
+  /// list never loads thousands of points. Added in schema version 2.
+  TextColumn get previewJson => text().withDefault(const Constant('[]'))();
   BoolColumn get synced => boolean().withDefault(const Constant(false))();
 
   @override

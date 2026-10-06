@@ -14,10 +14,23 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'pulseroute'));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  /// Removes every workout and point (used after deleting the account).
+  Future<void> clearAll() => transaction(() async {
+    await delete(localTrackPoints).go();
+    await delete(localWorkouts).go();
+  });
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (m, from, to) async {
+      // v2: route previews for the history list. Older workouts get their
+      // preview computed on first read (see DriftWorkoutRepository).
+      if (from < 2) {
+        await m.addColumn(localWorkouts, localWorkouts.previewJson);
+      }
+    },
     beforeOpen: (details) async {
       // SQLite ignores foreign keys (and cascades) unless enabled.
       await customStatement('PRAGMA foreign_keys = ON');

@@ -7,6 +7,7 @@ import '../../../../core/domain/activity_type.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/result.dart';
 import '../../../workouts/domain/entities/workout.dart';
+import '../../../workouts/domain/services/route_simplifier.dart';
 import '../../domain/entities/active_workout.dart';
 import '../../domain/entities/track_point.dart';
 import '../../domain/entities/workout_stats.dart';
@@ -102,6 +103,11 @@ class DriftWorkoutRecorderRepository implements WorkoutRecorderRepository {
         maxSpeedMps: Value(stats.maxSpeedMps),
         splitsJson: Value(
           jsonEncode([for (final s in splits) s.inMilliseconds]),
+        ),
+        previewJson: Value(
+          LocalWorkoutMapper.encodePreview(
+            simplifyRoute([for (final p in workout.points) p.point]),
+          ),
         ),
       ),
     );
