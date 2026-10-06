@@ -8,6 +8,11 @@
   GPS workout tracking with a community safety layer for runners and cyclists.
 </p>
 
+<p align="center">
+  <a href="https://github.com/FGTLight/pulseroute/actions/workflows/ci.yml"><img src="https://github.com/FGTLight/pulseroute/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/FGTLight/pulseroute/releases/latest"><img src="https://img.shields.io/github/v/release/FGTLight/pulseroute?label=APK" alt="Latest APK" /></a>
+</p>
+
 ---
 
 Runners and cyclists share a problem maps don't solve: the path that looks fine on screen has a dark stretch, a missing sidewalk or a dangerous crossing. **PulseRoute** records your runs and rides like a classic GPS tracker, and overlays **incidents reported by the community** (closed streets, dark areas, potholes and more). It **warns you before you reach one** on your path, even with the screen off.
@@ -148,6 +153,8 @@ The values are compiled in with `--dart-define-from-file`. On Android, Gradle re
 ### 4. Run
 
 ```bash
+git clone https://github.com/FGTLight/pulseroute.git
+cd pulseroute
 flutter pub get
 dart run build_runner build
 flutter run --dart-define-from-file=.env
