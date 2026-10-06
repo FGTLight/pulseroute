@@ -17,14 +17,17 @@ import '../widgets/incident_tile.dart';
 
 /// Nearby community incidents, on a map or as a list.
 class IncidentsScreen extends StatefulWidget {
-  const IncidentsScreen({super.key});
+  const IncidentsScreen({this.startWithList = false, super.key});
+
+  /// Open on the list instead of the map.
+  final bool startWithList;
 
   @override
   State<IncidentsScreen> createState() => _IncidentsScreenState();
 }
 
 class _IncidentsScreenState extends State<IncidentsScreen> {
-  bool _showList = false;
+  late bool _showList = widget.startWithList;
 
   @override
   Widget build(BuildContext context) {

@@ -19,6 +19,9 @@ abstract final class AppTheme {
     final scheme = ColorScheme.fromSeed(
       seedColor: AppColors.seed,
       brightness: brightness,
+      // Keeps the energetic coral of the brand instead of the muted tone
+      // the default (tonal spot) variant would derive from it.
+      dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
     );
     // Start from the default typography so custom styles keep its font.
     final textTheme = ThemeData(colorScheme: scheme).textTheme;
