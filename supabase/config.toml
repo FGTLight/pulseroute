@@ -1,0 +1,3 @@
+# Minimal Supabase CLI config. Run `supabase link --project-ref <ref>` and
+# `supabase db push` to apply the migrations in ./migrations.
+project_id = "pulseroute"
