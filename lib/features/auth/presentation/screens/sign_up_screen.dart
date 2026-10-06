@@ -6,9 +6,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/utils/form_status.dart';
 import '../../../../core/utils/validators.dart';
+import '../../../../core/widgets/activity_selector.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../cubit/sign_up_cubit.dart';
-import '../widgets/activity_selector.dart';
 import '../widgets/auth_scaffold.dart';
 
 /// Account creation. Expects a [SignUpCubit] above it.

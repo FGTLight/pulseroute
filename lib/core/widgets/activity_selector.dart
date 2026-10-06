@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/domain/activity_type.dart';
+import '../domain/activity_type.dart';
 
 /// Icon for each [ActivityType].
 extension ActivityTypeIcon on ActivityType {

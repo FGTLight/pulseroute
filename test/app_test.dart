@@ -11,8 +11,19 @@ import 'package:pulseroute/features/auth/domain/usecases/auth_usecases.dart';
 import 'package:pulseroute/features/auth/presentation/bloc/session_bloc.dart';
 import 'package:pulseroute/features/auth/presentation/cubit/sign_in_cubit.dart';
 import 'package:pulseroute/features/settings/presentation/cubit/theme_cubit.dart';
+import 'package:pulseroute/features/tracking/domain/repositories/location_repository.dart';
+import 'package:pulseroute/features/tracking/domain/repositories/workout_recorder_repository.dart';
+import 'package:pulseroute/features/tracking/domain/usecases/finish_workout.dart';
+import 'package:pulseroute/features/tracking/presentation/bloc/tracking_bloc.dart';
+import 'package:pulseroute/features/workouts/domain/repositories/workout_sync_repository.dart';
 
 import 'helpers/mocks.dart';
+
+class _MockLocation extends Mock implements LocationRepository;
+
+class _MockRecorder extends Mock implements WorkoutRecorderRepository;
+
+class _MockSync extends Mock implements WorkoutSyncRepository;
 
 void main() {
   const user = AppUser(id: 'u1', email: 'ana@example.com');
@@ -31,13 +42,28 @@ void main() {
     when(() => auth.userChanges).thenAnswer((_) => userChanges.stream);
     when(() => auth.signOut()).thenAnswer((_) async => const Success(null));
 
+    final location = _MockLocation();
+    when(location.isBatteryOptimized).thenAnswer((_) async => false);
+    final recorder = _MockRecorder();
+    when(recorder.loadActive).thenAnswer((_) async => const Success(null));
+
     // The router creates screen blocs from the service locator.
-    getIt.registerFactory(
-      () => SignInCubit(
-        signInWithPassword: SignInWithPassword(auth),
-        sendMagicLink: SendMagicLink(auth),
-      ),
-    );
+    getIt
+      ..registerLazySingleton(
+        () => TrackingBloc(
+          location: location,
+          recorder: recorder,
+          finishWorkout: FinishWorkout(recorder: recorder, sync: _MockSync()),
+          newId: () => 'w1',
+        ),
+        dispose: (bloc) => bloc.close(),
+      )
+      ..registerFactory(
+        () => SignInCubit(
+          signInWithPassword: SignInWithPassword(auth),
+          sendMagicLink: SendMagicLink(auth),
+        ),
+      );
   });
 
   tearDown(() async {
@@ -67,7 +93,7 @@ void main() {
   testWidgets('signed-in users see the tabs and can switch', (tester) async {
     await pumpApp(tester, user: user);
 
-    expect(find.text('Ready when you are'), findsOneWidget);
+    expect(find.byKey(const Key('startButton')), findsOneWidget);
     await tester.tap(find.text('History'));
     await tester.pumpAndSettle();
     expect(find.text('No workouts yet'), findsOneWidget);
@@ -81,7 +107,7 @@ void main() {
     userChanges.add(user);
     await tester.pumpAndSettle();
 
-    expect(find.text('Ready when you are'), findsOneWidget);
+    expect(find.byKey(const Key('startButton')), findsOneWidget);
   });
 
   testWidgets('theme and sign out from Settings', (tester) async {

@@ -1,0 +1,8 @@
+targets:
+  $default:
+    builders:
+      drift_dev:
+        options:
+          # Keep millisecond precision for GPS timestamps (the default stores
+          # whole seconds, which would merge consecutive fixes).
+          store_date_time_values_as_text: true

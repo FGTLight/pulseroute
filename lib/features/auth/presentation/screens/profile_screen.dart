@@ -5,10 +5,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/domain/activity_type.dart';
 import '../../../../core/utils/validators.dart';
+import '../../../../core/widgets/activity_selector.dart';
 import '../../../../core/widgets/state_views.dart';
 import '../../domain/entities/user_profile.dart';
 import '../cubit/profile_cubit.dart';
-import '../widgets/activity_selector.dart';
 
 /// Edit display name and preferred activity. Expects a [ProfileCubit].
 class ProfileScreen extends StatelessWidget {

@@ -1,6 +1,7 @@
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../features/auth/data/repositories/supabase_auth_repository.dart';
 import '../../features/auth/data/repositories/supabase_profile_repository.dart';
@@ -14,6 +15,16 @@ import '../../features/auth/presentation/cubit/sign_up_cubit.dart';
 import '../../features/settings/data/shared_prefs_settings_repository.dart';
 import '../../features/settings/domain/settings_repository.dart';
 import '../../features/settings/presentation/cubit/theme_cubit.dart';
+import '../../features/tracking/data/repositories/drift_workout_recorder_repository.dart';
+import '../../features/tracking/data/repositories/geolocator_location_repository.dart';
+import '../../features/tracking/domain/repositories/location_repository.dart';
+import '../../features/tracking/domain/repositories/workout_recorder_repository.dart';
+import '../../features/tracking/domain/usecases/finish_workout.dart';
+import '../../features/tracking/presentation/bloc/tracking_bloc.dart';
+import '../../features/workouts/data/datasources/workout_remote_data_source.dart';
+import '../../features/workouts/data/repositories/workout_sync_repository_impl.dart';
+import '../../features/workouts/domain/repositories/workout_sync_repository.dart';
+import '../database/app_database.dart';
 import '../env/app_env.dart';
 
 /// Service locator used to wire the app together.
@@ -31,10 +42,15 @@ Future<void> configureDependencies(AppEnv env, SupabaseClient supabase) async {
     // Core
     ..registerSingleton<AppEnv>(env)
     ..registerSingleton<SharedPreferences>(prefs)
-    ..registerSingleton<SupabaseClient>(supabase);
+    ..registerSingleton<SupabaseClient>(supabase)
+    ..registerSingleton<AppDatabase>(
+      AppDatabase(),
+      dispose: (db) => db.close(),
+    );
 
   _registerSettings();
   _registerAuth();
+  _registerTracking();
 }
 
 void _registerSettings() {
@@ -71,5 +87,33 @@ void _registerAuth() {
     ..registerFactory(() => SignUpCubit(signUp: getIt()))
     ..registerFactory(
       () => ProfileCubit(getMyProfile: getIt(), updateProfile: getIt()),
+    );
+}
+
+void _registerTracking() {
+  getIt
+    // Data
+    ..registerLazySingleton<LocationRepository>(
+      GeolocatorLocationRepository.new,
+    )
+    ..registerLazySingleton<WorkoutRecorderRepository>(
+      () => DriftWorkoutRecorderRepository(getIt()),
+    )
+    ..registerLazySingleton(() => WorkoutRemoteDataSource(getIt()))
+    ..registerLazySingleton<WorkoutSyncRepository>(
+      () => WorkoutSyncRepositoryImpl(getIt(), getIt()),
+    )
+    // Domain
+    ..registerFactory(() => FinishWorkout(recorder: getIt(), sync: getIt()))
+    // Presentation: one bloc for the whole app; it restores any workout
+    // interrupted by the app being killed as soon as it is created.
+    ..registerLazySingleton<TrackingBloc>(
+      () => TrackingBloc(
+        location: getIt(),
+        recorder: getIt(),
+        finishWorkout: getIt(),
+        newId: const Uuid().v4,
+      )..add(const TrackingRecoveryRequested()),
+      dispose: (bloc) => bloc.close(),
     );
 }

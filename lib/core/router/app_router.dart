@@ -13,8 +13,11 @@ import '../../features/auth/presentation/screens/sign_in_screen.dart';
 import '../../features/auth/presentation/screens/sign_up_screen.dart';
 import '../../features/incidents/presentation/screens/incidents_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
+import '../../features/tracking/presentation/bloc/tracking_bloc.dart';
 import '../../features/tracking/presentation/screens/track_screen.dart';
+import '../../features/workouts/domain/entities/workout.dart';
 import '../../features/workouts/presentation/screens/history_screen.dart';
+import '../../features/workouts/presentation/screens/workout_summary_screen.dart';
 import '../di/injection.dart';
 import '../widgets/app_shell.dart';
 import 'app_routes.dart';
@@ -52,13 +55,26 @@ GoRouter createRouter({
         ),
       ),
       StatefulShellRoute.indexedStack(
-        builder: (context, state, shell) => AppShell(navigationShell: shell),
+        // The tracking bloc lives above the tabs, so a workout keeps
+        // recording while the user browses history or incidents.
+        builder: (context, state, shell) => BlocProvider.value(
+          value: getIt<TrackingBloc>(),
+          child: AppShell(navigationShell: shell),
+        ),
         branches: [
           StatefulShellBranch(
             routes: [
               GoRoute(
                 path: AppRoutes.track,
                 builder: (context, state) => const TrackScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'summary',
+                    parentNavigatorKey: rootKey,
+                    builder: (context, state) =>
+                        WorkoutSummaryScreen(workout: state.extra! as Workout),
+                  ),
+                ],
               ),
             ],
           ),
