@@ -67,6 +67,18 @@ jobs:
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
           MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
         run: |
+          missing=""
+          [ -z "$SUPABASE_URL" ] && missing="$missing SUPABASE_URL"
+          [ -z "$SUPABASE_PUBLISHABLE_KEY" ] && missing="$missing SUPABASE_PUBLISHABLE_KEY"
+          [ -z "$MAPS_API_KEY" ] && missing="$missing MAPS_API_KEY"
+          if [ -n "$missing" ]; then
+            # Releases must be usable: refuse to publish an APK without keys.
+            if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+              echo "::error::Missing repository secrets:$missing"
+              exit 1
+            fi
+            echo "::warning::Missing secrets:$missing (the APK will show the configuration screen)"
+          fi
           {
             echo "SUPABASE_URL=$SUPABASE_URL"
             echo "SUPABASE_PUBLISHABLE_KEY=$SUPABASE_PUBLISHABLE_KEY"
