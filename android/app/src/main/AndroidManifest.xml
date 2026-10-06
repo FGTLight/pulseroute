@@ -45,6 +45,13 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Magic-link sign in: io.pulseroute://login-callback -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="io.pulseroute" android:host="login-callback" />
+            </intent-filter>
         </activity>
         <!-- Maps key injected from the MAPS_API_KEY dart-define (see build.gradle.kts). -->
         <meta-data

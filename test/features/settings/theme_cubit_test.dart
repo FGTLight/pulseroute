@@ -2,16 +2,15 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:pulseroute/features/settings/domain/settings_repository.dart';
 import 'package:pulseroute/features/settings/presentation/cubit/theme_cubit.dart';
 
-class _MockSettingsRepository extends Mock implements SettingsRepository;
+import '../../helpers/mocks.dart';
 
 void main() {
-  late _MockSettingsRepository repository;
+  late MockSettingsRepository repository;
 
   setUp(() {
-    repository = _MockSettingsRepository();
+    repository = MockSettingsRepository();
     when(() => repository.themeMode).thenReturn(ThemeMode.system);
     when(() => repository.setThemeMode(any())).thenAnswer((_) async {});
   });

@@ -22,3 +22,6 @@ linter:
     # readers are familiar with than the Dart 3.13 shorthand.
     unnecessary_type_name_in_constructor: false
     unnecessary_const_in_enum_constructor: false
+    # Suggests Dart 3.12 private named parameters (`{required this._x}`);
+    # explicit initializer lists are clearer to most readers today.
+    prefer_initializing_formals: false

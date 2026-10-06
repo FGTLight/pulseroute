@@ -12,8 +12,8 @@ void main() {
     expect(result.fold((v) => 'ok $v', (f) => f.message), 'ok 42');
   });
 
-  test('Error exposes its failure', () {
-    const Result<int> result = Error(NetworkFailure());
+  test('Err exposes its failure', () {
+    const Result<int> result = Err(NetworkFailure());
 
     expect(result.isSuccess, isFalse);
     expect(result.valueOrNull, isNull);

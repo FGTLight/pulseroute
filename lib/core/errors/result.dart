@@ -11,7 +11,7 @@ sealed class Result<T> {
   R fold<R>(R Function(T value) onSuccess, R Function(Failure f) onFailure) =>
       switch (this) {
         Success(:final value) => onSuccess(value),
-        Error(:final failure) => onFailure(failure),
+        Err(:final failure) => onFailure(failure),
       };
 
   bool get isSuccess => this is Success<T>;
@@ -19,13 +19,13 @@ sealed class Result<T> {
   /// The value on success, otherwise `null`.
   T? get valueOrNull => switch (this) {
     Success(:final value) => value,
-    Error() => null,
+    Err() => null,
   };
 
   /// The failure on error, otherwise `null`.
   Failure? get failureOrNull => switch (this) {
     Success() => null,
-    Error(:final failure) => failure,
+    Err(:final failure) => failure,
   };
 }
 
@@ -37,8 +37,8 @@ final class Success<T> extends Result<T> {
 }
 
 /// A failed [Result] carrying a [failure].
-final class Error<T> extends Result<T> {
-  const Error(this.failure);
+final class Err<T> extends Result<T> {
+  const Err(this.failure);
 
   final Failure failure;
 }
