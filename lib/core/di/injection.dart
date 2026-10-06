@@ -12,6 +12,12 @@ import '../../features/auth/presentation/bloc/session_bloc.dart';
 import '../../features/auth/presentation/cubit/profile_cubit.dart';
 import '../../features/auth/presentation/cubit/sign_in_cubit.dart';
 import '../../features/auth/presentation/cubit/sign_up_cubit.dart';
+import '../../features/incidents/data/repositories/image_picker_photo_repository.dart';
+import '../../features/incidents/data/repositories/supabase_incident_repository.dart';
+import '../../features/incidents/domain/repositories/incident_repository.dart';
+import '../../features/incidents/domain/usecases/incident_usecases.dart';
+import '../../features/incidents/presentation/bloc/incidents_bloc.dart';
+import '../../features/incidents/presentation/cubit/report_incident_cubit.dart';
 import '../../features/settings/data/shared_prefs_settings_repository.dart';
 import '../../features/settings/domain/settings_repository.dart';
 import '../../features/settings/presentation/cubit/theme_cubit.dart';
@@ -25,6 +31,7 @@ import '../../features/workouts/data/datasources/workout_remote_data_source.dart
 import '../../features/workouts/data/repositories/workout_sync_repository_impl.dart';
 import '../../features/workouts/domain/repositories/workout_sync_repository.dart';
 import '../database/app_database.dart';
+import '../domain/geo_point.dart';
 import '../env/app_env.dart';
 
 /// Service locator used to wire the app together.
@@ -51,6 +58,7 @@ Future<void> configureDependencies(AppEnv env, SupabaseClient supabase) async {
   _registerSettings();
   _registerAuth();
   _registerTracking();
+  _registerIncidents();
 }
 
 void _registerSettings() {
@@ -115,5 +123,35 @@ void _registerTracking() {
         newId: const Uuid().v4,
       )..add(const TrackingRecoveryRequested()),
       dispose: (bloc) => bloc.close(),
+    );
+}
+
+void _registerIncidents() {
+  getIt
+    // Data
+    ..registerLazySingleton<IncidentRepository>(
+      () => SupabaseIncidentRepository(getIt()),
+    )
+    ..registerLazySingleton<PhotoRepository>(ImagePickerPhotoRepository.new)
+    // Domain
+    ..registerFactory(() => GetNearbyIncidents(getIt()))
+    ..registerFactory(() => ReportIncident(getIt()))
+    ..registerFactory(() => VoteOnIncident(getIt()))
+    // Presentation
+    ..registerLazySingleton<IncidentsBloc>(
+      () => IncidentsBloc(
+        getNearby: getIt(),
+        vote: getIt(),
+        repository: getIt(),
+        locate: getIt<LocationRepository>().currentPosition,
+      )..add(const IncidentsStarted()),
+      dispose: (bloc) => bloc.close(),
+    )
+    ..registerFactoryParam<ReportIncidentCubit, GeoPoint, void>(
+      (location, _) => ReportIncidentCubit(
+        location: location,
+        reportIncident: getIt(),
+        photos: getIt(),
+      ),
     );
 }

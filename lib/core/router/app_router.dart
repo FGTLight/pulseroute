@@ -11,7 +11,10 @@ import '../../features/auth/presentation/cubit/sign_up_cubit.dart';
 import '../../features/auth/presentation/screens/profile_screen.dart';
 import '../../features/auth/presentation/screens/sign_in_screen.dart';
 import '../../features/auth/presentation/screens/sign_up_screen.dart';
+import '../../features/incidents/presentation/bloc/incidents_bloc.dart';
+import '../../features/incidents/presentation/cubit/report_incident_cubit.dart';
 import '../../features/incidents/presentation/screens/incidents_screen.dart';
+import '../../features/incidents/presentation/screens/report_incident_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/tracking/presentation/bloc/tracking_bloc.dart';
 import '../../features/tracking/presentation/screens/track_screen.dart';
@@ -19,6 +22,7 @@ import '../../features/workouts/domain/entities/workout.dart';
 import '../../features/workouts/presentation/screens/history_screen.dart';
 import '../../features/workouts/presentation/screens/workout_summary_screen.dart';
 import '../di/injection.dart';
+import '../domain/geo_point.dart';
 import '../widgets/app_shell.dart';
 import 'app_routes.dart';
 
@@ -57,8 +61,11 @@ GoRouter createRouter({
       StatefulShellRoute.indexedStack(
         // The tracking bloc lives above the tabs, so a workout keeps
         // recording while the user browses history or incidents.
-        builder: (context, state, shell) => BlocProvider.value(
-          value: getIt<TrackingBloc>(),
+        builder: (context, state, shell) => MultiBlocProvider(
+          providers: [
+            BlocProvider.value(value: getIt<TrackingBloc>()),
+            BlocProvider.value(value: getIt<IncidentsBloc>()),
+          ],
           child: AppShell(navigationShell: shell),
         ),
         branches: [
@@ -83,6 +90,18 @@ GoRouter createRouter({
               GoRoute(
                 path: AppRoutes.incidents,
                 builder: (context, state) => const IncidentsScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'report',
+                    parentNavigatorKey: rootKey,
+                    builder: (context, state) => BlocProvider(
+                      create: (_) => getIt<ReportIncidentCubit>(
+                        param1: state.extra! as GeoPoint,
+                      ),
+                      child: const ReportIncidentScreen(),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

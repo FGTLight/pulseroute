@@ -6,6 +6,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/domain/distance_unit.dart';
 import '../../../../core/router/app_routes.dart';
+import '../../../incidents/presentation/bloc/incidents_bloc.dart';
+import '../../../incidents/presentation/report_flow.dart';
+import '../../../map/presentation/widgets/incident_layer_builder.dart';
 import '../bloc/tracking_bloc.dart';
 import '../widgets/location_rationale_sheet.dart';
 import '../widgets/tracking_map.dart';
@@ -51,14 +54,26 @@ class TrackScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: BlocListener<TrackingBloc, TrackingState>(
-        listenWhen: (a, b) =>
-            (b.errorMessage != null && a.errorMessage != b.errorMessage) ||
-            (b.showRationale && !a.showRationale) ||
-            (b.status == TrackingStatus.finished &&
-                a.status != TrackingStatus.finished),
-        listener: (context, state) =>
-            unawaited(_onStateChanged(context, state)),
+      body: MultiBlocListener(
+        listeners: [
+          BlocListener<TrackingBloc, TrackingState>(
+            listenWhen: (a, b) =>
+                (b.errorMessage != null && a.errorMessage != b.errorMessage) ||
+                (b.showRationale && !a.showRationale) ||
+                (b.status == TrackingStatus.finished &&
+                    a.status != TrackingStatus.finished),
+            listener: (context, state) =>
+                unawaited(_onStateChanged(context, state)),
+          ),
+          // Keep the safety layer centered on the user while they move.
+          BlocListener<TrackingBloc, TrackingState>(
+            listenWhen: (a, b) =>
+                b.position != null && a.position != b.position,
+            listener: (context, state) => context.read<IncidentsBloc>().add(
+              IncidentsAreaChanged(state.position!),
+            ),
+          ),
+        ],
         child: Stack(
           children: [
             Positioned.fill(
@@ -67,11 +82,16 @@ class TrackScreen extends StatelessWidget {
                     a.workout?.points.length != b.workout?.points.length ||
                     a.position != b.position ||
                     a.accessIssue != b.accessIssue,
-                builder: (context, state) => TrackingMap(
-                  segments: state.routeSegments,
-                  position: state.position,
-                  showMyLocation: state.accessIssue == null,
-                  bottomPadding: _panelHeight,
+                builder: (context, state) => IncidentLayerBuilder(
+                  builder: (context, incidents) => TrackingMap(
+                    segments: state.routeSegments,
+                    position: state.position,
+                    showMyLocation: state.accessIssue == null,
+                    bottomPadding: _panelHeight,
+                    incidents: incidents,
+                    onLongPress: (point) =>
+                        unawaited(openReportFlow(context, point)),
+                  ),
                 ),
               ),
             ),

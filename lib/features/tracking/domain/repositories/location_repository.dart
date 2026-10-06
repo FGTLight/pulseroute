@@ -1,4 +1,5 @@
 import '../../../../core/domain/activity_type.dart';
+import '../../../../core/domain/geo_point.dart';
 import '../entities/track_point.dart';
 
 /// What the app is allowed to do with the user's location.
@@ -34,6 +35,9 @@ abstract interface class LocationRepository {
   /// service with a persistent notification, so tracking continues with
   /// the screen off. Cancel the subscription to stop it.
   Stream<LocationFix> watch(ActivityType activity);
+
+  /// A one-off position (last known if recent), or `null` without access.
+  Future<GeoPoint?> currentPosition();
 
   /// Whether Android battery optimization may stop background tracking.
   Future<bool> isBatteryOptimized();

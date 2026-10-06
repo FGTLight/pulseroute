@@ -33,6 +33,22 @@ abstract final class Formatters {
     return '${perHour.toStringAsFixed(1)} $label';
   }
 
+  /// How long ago something happened: "just now", "5 min ago", "3 h ago",
+  /// "2 d ago".
+  static String age(DateTime then, DateTime now) {
+    final d = now.difference(then);
+    if (d.inMinutes < 1) return 'just now';
+    if (d.inHours < 1) return '${d.inMinutes} min ago';
+    if (d.inDays < 1) return '${d.inHours} h ago';
+    return '${d.inDays} d ago';
+  }
+
+  /// "350 m" below 1 km, otherwise like [distance].
+  static String shortDistance(double meters, DistanceUnit unit) =>
+      unit == DistanceUnit.km && meters < 1000
+      ? '${meters.round()} m'
+      : distance(meters, unit);
+
   /// Elevation in meters or feet: "120 m" / "394 ft".
   static String elevation(double meters, DistanceUnit unit) =>
       unit == DistanceUnit.km

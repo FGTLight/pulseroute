@@ -5,6 +5,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../../core/domain/geo_point.dart';
 import '../../../../core/theme/map_styles.dart';
+import '../../../map/presentation/widgets/incident_layer.dart';
 import '../../../map/presentation/widgets/map_converters.dart';
 
 /// Full-screen map with the live route. Follows the user until they pan
@@ -15,7 +16,8 @@ class TrackingMap extends StatefulWidget {
     required this.position,
     required this.showMyLocation,
     this.bottomPadding = 0,
-    this.overlays = const {},
+    this.incidents,
+    this.onLongPress,
     super.key,
   });
 
@@ -27,8 +29,11 @@ class TrackingMap extends StatefulWidget {
   /// Space covered by the stats panel, so Google's logo stays visible.
   final double bottomPadding;
 
-  /// Extra shapes drawn by other features (e.g. incident areas).
-  final Set<Circle> overlays;
+  /// Community incidents drawn on top of the route.
+  final IncidentLayer? incidents;
+
+  /// Long-press on the map (used to report an incident there).
+  final ValueChanged<GeoPoint>? onLongPress;
 
   @override
   State<TrackingMap> createState() => _TrackingMapState();
@@ -84,7 +89,12 @@ class _TrackingMapState extends State<TrackingMap> {
           onCameraMoveStarted: () {
             if (_follow) setState(() => _follow = false);
           },
-          circles: widget.overlays,
+          onLongPress: widget.onLongPress == null
+              ? null
+              : (p) => widget.onLongPress!(GeoPoint(p.latitude, p.longitude)),
+          markers: widget.incidents?.markers ?? const {},
+          circles: widget.incidents?.circles ?? const {},
+          clusterManagers: IncidentLayer.clusterManagers,
           polylines: {
             for (var i = 0; i < widget.segments.length; i++)
               Polyline(

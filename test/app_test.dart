@@ -10,6 +10,9 @@ import 'package:pulseroute/features/auth/domain/entities/app_user.dart';
 import 'package:pulseroute/features/auth/domain/usecases/auth_usecases.dart';
 import 'package:pulseroute/features/auth/presentation/bloc/session_bloc.dart';
 import 'package:pulseroute/features/auth/presentation/cubit/sign_in_cubit.dart';
+import 'package:pulseroute/features/incidents/domain/repositories/incident_repository.dart';
+import 'package:pulseroute/features/incidents/domain/usecases/incident_usecases.dart';
+import 'package:pulseroute/features/incidents/presentation/bloc/incidents_bloc.dart';
 import 'package:pulseroute/features/settings/presentation/cubit/theme_cubit.dart';
 import 'package:pulseroute/features/tracking/domain/repositories/location_repository.dart';
 import 'package:pulseroute/features/tracking/domain/repositories/workout_recorder_repository.dart';
@@ -25,7 +28,11 @@ class _MockRecorder extends Mock implements WorkoutRecorderRepository;
 
 class _MockSync extends Mock implements WorkoutSyncRepository;
 
+class _MockIncidents extends Mock implements IncidentRepository;
+
 void main() {
+  setUpAll(() => registerFallbackValue(IncidentsBloc.fallbackCenter));
+
   const user = AppUser(id: 'u1', email: 'ana@example.com');
   late MockAuthRepository auth;
   late StreamController<AppUser?> userChanges;
@@ -47,8 +54,22 @@ void main() {
     final recorder = _MockRecorder();
     when(recorder.loadActive).thenAnswer((_) async => const Success(null));
 
+    final incidents = _MockIncidents();
+    when(incidents.watchChanges).thenAnswer((_) => const Stream.empty());
+    when(() => incidents.nearby(any(), radiusM: any(named: 'radiusM')))
+        .thenAnswer((_) async => const Success([]));
+
     // The router creates screen blocs from the service locator.
     getIt
+      ..registerLazySingleton(
+        () => IncidentsBloc(
+          getNearby: GetNearbyIncidents(incidents),
+          vote: VoteOnIncident(incidents),
+          repository: incidents,
+          locate: () async => null,
+        )..add(const IncidentsStarted()),
+        dispose: (bloc) => bloc.close(),
+      )
       ..registerLazySingleton(
         () => TrackingBloc(
           location: location,

@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart' as geo;
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../core/domain/activity_type.dart';
+import '../../../../core/domain/geo_point.dart';
 import '../../domain/entities/track_point.dart';
 import '../../domain/repositories/location_repository.dart';
 
@@ -80,6 +81,28 @@ class GeolocatorLocationRepository implements LocationRepository {
       ),
       _ => const geo.LocationSettings(),
     };
+  }
+
+  @override
+  Future<GeoPoint?> currentPosition() async {
+    if (!(await checkAccess()).isGranted) return null;
+    try {
+      final last = await geo.Geolocator.getLastKnownPosition();
+      final fresh =
+          last != null &&
+          DateTime.now().difference(last.timestamp) <
+              const Duration(minutes: 2);
+      final position = fresh
+          ? last
+          : await geo.Geolocator.getCurrentPosition(
+              locationSettings: const geo.LocationSettings(
+                timeLimit: Duration(seconds: 10),
+              ),
+            );
+      return GeoPoint(position.latitude, position.longitude);
+    } on Object {
+      return null;
+    }
   }
 
   @override

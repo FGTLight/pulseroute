@@ -6,6 +6,7 @@ abstract final class AppRoutes {
   static const track = '/track';
   static const workoutSummary = '/track/summary';
   static const incidents = '/incidents';
+  static const reportIncident = '/incidents/report';
   static const history = '/history';
   static const settings = '/settings';
   static const profile = '/settings/profile';
